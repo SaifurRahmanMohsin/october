@@ -411,7 +411,6 @@ class Lists extends WidgetBase
          * Prepare related eager loads (withs) and custom selects (joins)
          */
         foreach ($this->getVisibleColumns() as $column) {
-
             // If useRelationCount is enabled, eager load the count of the relation into $relation_count
             if ($column->relation && @$column->config['useRelationCount']) {
                 $query->withCount($column->relation);
@@ -465,7 +464,6 @@ class Lists extends WidgetBase
                     }
                 }
             }
-
         });
 
         /*
@@ -482,7 +480,6 @@ class Lists extends WidgetBase
              * Relation column
              */
             if (isset($column->relation)) {
-
                 // @todo Find a way...
                 $relationType = $this->model->getRelationType($column->relation);
                 if ($relationType == 'morphTo') {
@@ -732,7 +729,6 @@ class Lists extends WidgetBase
         }
 
         if ($this->columnOverride && is_array($this->columnOverride)) {
-
             $invalidColumns = array_diff($this->columnOverride, array_keys($definitions));
             if (!count($definitions)) {
                 throw new ApplicationException(Lang::get(
@@ -934,6 +930,10 @@ class Lists extends WidgetBase
         }
 
         if ($this->showSetup) {
+            $total++;
+        }
+
+        if ($this->showTree) {
             $total++;
         }
 
@@ -1151,8 +1151,13 @@ class Lists extends WidgetBase
                 return call_user_func_array($callback, [$value, $column, $record]);
             }
         }
+        
+        $customMessage = '';
+        if ($type === 'relation') {
+            $customMessage = 'Type: relation is not supported, instead use the relation property to specify a relationship to pull the value from and set the type to the type of the value expected.';
+        }
 
-        throw new ApplicationException(sprintf('List column type "%s" could not be found.', $type));
+        throw new ApplicationException(sprintf('List column type "%s" could not be found. %s', $type, $customMessage));
     }
 
     /**
@@ -1194,16 +1199,6 @@ class Lists extends WidgetBase
      */
     protected function evalNumberTypeValue($record, $column, $value)
     {
-        return $this->evalTextTypeValue($record, $column, $value);
-    }
-
-    /**
-     * Common mistake, relation is not a valid list column.
-     * @deprecated Remove if year >= 2018
-     */
-    protected function evalRelationTypeValue($record, $column, $value)
-    {
-        traceLog(sprintf('Warning: List column type "relation" for class "%s" is not valid.', get_class($record)));
         return $this->evalTextTypeValue($record, $column, $value);
     }
 
@@ -1493,7 +1488,6 @@ class Lists extends WidgetBase
     public function onSort()
     {
         if ($column = post('sortColumn')) {
-
             /*
              * Toggle the sort direction and set the sorting column
              */
@@ -1559,7 +1553,9 @@ class Lists extends WidgetBase
          */
         if ($this->sortColumn === null || !$this->isSortable($this->sortColumn)) {
             $columns = $this->visibleColumns ?: $this->getVisibleColumns();
-            $columns = array_filter($columns, function ($column) { return $column->sortable; });
+            $columns = array_filter($columns, function ($column) {
+                return $column->sortable;
+            });
             $this->sortColumn = key($columns);
             $this->sortDirection = 'desc';
         }
